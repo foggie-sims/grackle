@@ -207,6 +207,15 @@
 ///   https://gcc.gnu.org/wiki/Visibility
 #define GRIMPL_NOEXPORT [[gnu::visibility("hidden")]]
 
+// Temperature cap for metal neutral-neutral rates (kz17, kz18, kz21, kz24,
+// kz25, kz28, kz31). The fits are valid only up to T ~ 300-3500 K and
+// diverge when extrapolated to the 1e9 K end of the rate table, far above
+// the gas-kinetic limit.
+// Above the cap each rate is held at its capped value, following UMIST
+// RATE22 [REF: Millar et al. 2024, A&A 682, A109; k(T > Tu) = k(Tu)] and
+// CLOUDY [REF: Shaw, Ferland & Chatzikos 2023, RNAAS 7, 153; T_cap = 2500 K].
+static constexpr double kz_Tcap = 2500.0;
+
 extern "C" {
 
 GRIMPL_NOEXPORT double k125_rate_(double T, double kunit,
@@ -328,12 +337,14 @@ GRIMPL_NOEXPORT double kz16_rate_(double T, double kunit,
 
 GRIMPL_NOEXPORT double kz17_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz17 = 7.00e-14 * pow((T / 300.0), 2.80) * exp(-1950.0 / T);
   return std::fmax(kz17, tiny) / kunit;
 }
 
 GRIMPL_NOEXPORT double kz18_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz18 = 6.83e-12 * pow((T / 300.0), 1.60) * exp(-9720.0 / T);
   return std::fmax(kz18, tiny) / kunit;
 }
@@ -352,12 +363,8 @@ GRIMPL_NOEXPORT double kz20_rate_(double T, double kunit,
 
 GRIMPL_NOEXPORT double kz21_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
-  double kz21;
-  if (T < 1.0e7) {
-    kz21 = 3.43e-13 * pow((T / 300.0), 2.67) * exp(-3160.0 / T);
-  } else {
-    kz21 = 3.43e-13 * pow(1.0e7 / 300.0, 2.67) * exp(-3160.0 / 1.0e7);
-  }
+  T = std::fmin(T, kz_Tcap);
+  double kz21 = 3.43e-13 * pow((T / 300.0), 2.67) * exp(-3160.0 / T);
   return std::fmax(kz21, tiny) / kunit;
 }
 
@@ -389,12 +396,14 @@ GRIMPL_NOEXPORT double kz23_rate_(double T, double kunit,
 
 GRIMPL_NOEXPORT double kz24_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz24 = 1.55e-12 * pow((T / 300.0), 1.60) * exp(-1660.0 / T);
   return std::fmax(kz24, tiny) / kunit;
 }
 
 GRIMPL_NOEXPORT double kz25_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz25 = 1.65e-12 * pow((T / 300.0), 1.14) * exp(-50.0 / T);
   return std::fmax(kz25, tiny) / kunit;
 }
@@ -413,6 +422,7 @@ GRIMPL_NOEXPORT double kz27_rate_(double T, double kunit,
 
 GRIMPL_NOEXPORT double kz28_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz28 = 1.1e-10 * pow((T / 300.0), 0.5);
   return std::fmax(kz28, tiny) / kunit;
 }
@@ -431,6 +441,7 @@ GRIMPL_NOEXPORT double kz30_rate_(double T, double kunit,
 
 GRIMPL_NOEXPORT double kz31_rate_(double T, double kunit,
                                   chemistry_data* my_chemistry) {
+  T = std::fmin(T, kz_Tcap);
   double kz31 = 4.9e-20 * pow((T / 300.0), 1.58);
   return std::fmax(kz31, tiny) / kunit;
 }
