@@ -377,6 +377,13 @@ void grackle::impl::dust_destruction(
                  (100.0 / my_chemistry->sne_shockspeed) * constants::SolarMass /
                  (internalu.urho * std::pow(internalu.uxyz, 3));
 
+  // Ms100 * sne_rate is in the unscaled comoving density units, but
+  // solve_rate_cool has already multiplied comoving fields by a_value^-3.
+  // Undo that scaling on rho_gas in the shock term.
+  double shock_rho_scale = (internalu.extfields_in_comoving == 1)
+                               ? std::pow(internalu.a_value, 3)
+                               : 1.0;
+
   for (int i = idx_range.i_start; i < idx_range.i_stop; i++) {
     destruction_dM[i] = 0.0;
 
@@ -406,9 +413,9 @@ void grackle::impl::dust_destruction(
         // volume delivered over the external timestep dt_full, so
         // Ms100 * sne_this / dt_full is the shocked-gas mass rate and
         // tau_dest the time to shock all gas in the cell.
-        double tau_dest =
-            rho_gas / (Ms100 * sne_this * my_chemistry->dust_destruction_eff) *
-            dt_full;
+        double tau_dest = rho_gas * shock_rho_scale /
+                          (Ms100 * sne_this * my_chemistry->dust_destruction_eff) *
+                          dt_full;
         dM_shock = std::min(rho_dust / tau_dest, rho_dust / dt);
       }
 
@@ -474,6 +481,13 @@ void grackle::impl::dust_destruction_species(
                  (100.0 / my_chemistry->sne_shockspeed) * constants::SolarMass /
                  (internalu.urho * std::pow(internalu.uxyz, 3));
 
+  // Ms100 * sne_rate is in the unscaled comoving density units, but
+  // solve_rate_cool has already multiplied comoving fields by a_value^-3.
+  // Undo that scaling on rho_gas in the shock term.
+  double shock_rho_scale = (internalu.extfields_in_comoving == 1)
+                               ? std::pow(internalu.a_value, 3)
+                               : 1.0;
+
   // Species-specific shock-vulnerability multipliers. Graphite is the
   // baseline (1.0); silicate follows the Slavin+2015 SNR gas-cleared mass
   // ratio, 990/600 = 1.65.
@@ -537,7 +551,7 @@ void grackle::impl::dust_destruction_species(
           // timescale. The exponential update supplies the dt dependence.
           double inv_tau_shock = Ms100 * shock_factor * sne_this *
                                  my_chemistry->dust_destruction_eff /
-                                 (rho_gas * dt_full);
+                                 (rho_gas * shock_rho_scale * dt_full);
           if (inv_tau_shock > 0.0 && std::isfinite(inv_tau_shock)) {
             inv_tau_loss += inv_tau_shock;
           }
