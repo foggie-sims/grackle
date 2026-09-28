@@ -211,10 +211,12 @@
 // kz25, kz28, kz31). The fits are valid only up to T ~ 300-3500 K and
 // diverge when extrapolated to the 1e9 K end of the rate table, far above
 // the gas-kinetic limit.
-// Above the cap each rate is held at its capped value, following UMIST
-// RATE22 [REF: Millar et al. 2024, A&A 682, A109; k(T > Tu) = k(Tu)] and
-// CLOUDY [REF: Shaw, Ferland & Chatzikos 2023, RNAAS 7, 153; T_cap = 2500 K].
-static constexpr double kz_Tcap = 2500.0;
+// UMIST RATE22 [REF: Millar et al. 2024, A&A 682, A109; k(T > Tu) = k(Tu)]
+// CLOUDY [REF: Shaw, Ferland & Chatzikos 2023, RNAAS 7, 153; T_cap = 2500 K]
+// We cap at 1e4 K instead: the steepest fits (kz17, kz21) only reach the
+// gas-kinetic limit near 1e4 K, where H ionizes and the molecular reactants
+// are collisionally destroyed.
+static constexpr double kz_Tcap = 1.0e4;
 
 extern "C" {
 
