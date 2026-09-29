@@ -57,7 +57,7 @@ _legacy_rate_attrs = frozenset(
         "kz24", "kz25", "kz26", "kz27", "kz28", "kz29", "kz30", "kz31", "kz32",
         "kz33", "kz34", "kz35", "kz36", "kz37", "kz38", "kz39", "kz40", "kz41",
         "kz42", "kz43", "kz44", "kz45", "kz46", "kz47", "kz48", "kz49", "kz50",
-        "kz51", "kz52", "kz53", "kz54",
+        "kz51", "kz52", "kz53", "kz54", "kz55",
     ]
 )
 

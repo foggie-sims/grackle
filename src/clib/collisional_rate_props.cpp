@@ -124,6 +124,7 @@
 /// | kz52      | SiI    +  OH   ->  SiOI   +  HI  |
 /// | kz53      | SiI    +  O2   ->  SiOI   +  OI  |
 /// | kz54      | SiOI   +  OH   ->  SiO2I  +  HI  |
+/// | kz55      | OHII   +  e    ->  OI     +  HI  |
 ///
 //===----------------------------------------------------------------------===//
 
@@ -586,6 +587,15 @@ GRIMPL_NOEXPORT double kz54_rate_(double T, double kunit,
   return std::fmax(kz54, tiny) / kunit;
 }
 
+// Dissociative recombination OHII + e -> OI + HI [REF: Mitchell 1990, Phys.
+// Rep. 186, 215; as listed in UMIST RATE22, Millar et al. 2024, A&A 682, A109].
+// beta < 0, no high-temperature cap is needed.
+GRIMPL_NOEXPORT double kz55_rate_(double T, double kunit,
+                                  chemistry_data* my_chemistry) {
+  double kz55 = 3.75e-8 * pow((T / 300.0), -0.5);
+  return std::fmax(kz55, tiny) / kunit;
+}
+
 }  // extern "C"
 
 int grackle::impl::visit_rate_props(const chemistry_data* my_chemistry,
@@ -713,6 +723,7 @@ int grackle::impl::visit_rate_props(const chemistry_data* my_chemistry,
     cb(grimpl::KColProp{CollisionalRxnLUT::kz52, &kz52_rate_, true}, ctx);
     cb(grimpl::KColProp{CollisionalRxnLUT::kz53, &kz53_rate_, true}, ctx);
     cb(grimpl::KColProp{CollisionalRxnLUT::kz54, &kz54_rate_, true}, ctx);
+    cb(grimpl::KColProp{CollisionalRxnLUT::kz55, &kz55_rate_, true}, ctx);
   }
 
   return GR_SUCCESS;

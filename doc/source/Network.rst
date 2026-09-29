@@ -563,6 +563,11 @@ various parameters.
      - kz54
      - `Millar et al. (1997) <https://ui.adsabs.harvard.edu/abs/1997A%26AS..121..139M/abstract>`__
      - :c:data:`metal_chemistry` = 1
+   * - OH\ :sup:`+` + e\ :sup:`-`
+     - O + H
+     - kz55
+     - `Millar et al. (2024) <https://ui.adsabs.harvard.edu/abs/2024A%26A...682A.109M/abstract>`__
+     - :c:data:`metal_chemistry` = 1
 
 .. note::
 
