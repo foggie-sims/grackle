@@ -927,14 +927,22 @@ inline void species_density_updates_gauss_seidel(
                    / ( 1. + acoef*dtit[i] );
 
 
-        // ***** OI **********
+        // ***** OI + OII (coupled) **********
+        // OI and OII exchange charge with H (kz22, kz39) on a timescale far
+        // shorter than the subcycle. Updating each with the partner's old
+        // value makes the pair swap instead of settling and does not conserve
+        // OI + OII, so the two are advanced together as one backward-Euler
+        // step. With s/l the sources/losses that do not involve the partner,
+        // x_oi the OI -> OII rate (kz22, kphOI) and x_oii the OII -> OI rate
+        // (kz39, kz45):
+        //   [1 + dt (l_oi  + x_oi )] OI'  -  dt x_oii OII' = OI  + dt s_oi
+        //   [1 + dt (l_oii + x_oii)] OII' -  dt x_oi  OI'  = OII + dt s_oii
+        // The exchange terms cancel exactly in OI' + OII'.
         scoef = 0. + 16. * ( 0.
             + kcol_buf[CollisionalRxnLUT::kz17][i] *    HI(i,j,k) *    OH(i,j,k) / 17.
             + kcol_buf[CollisionalRxnLUT::kz19][i] *    HI(i,j,k) *    O2(i,j,k) / 32.
             + kcol_buf[CollisionalRxnLUT::kz25][i] *    OH(i,j,k) *    OH(i,j,k) / 289.
             + kcol_buf[CollisionalRxnLUT::kz29][i] *    CI(i,j,k) *    O2(i,j,k) / 384.
-            + kcol_buf[CollisionalRxnLUT::kz39][i] *   OII(i,j,k) *    HI(i,j,k) / 16.
-            + kcol_buf[CollisionalRxnLUT::kz45][i] *   OII(i,j,k) *    de(i,j,k) / 16.
             + kcol_buf[CollisionalRxnLUT::kz47][i] * H2OII(i,j,k) *    de(i,j,k) / 18.
             + kcol_buf[CollisionalRxnLUT::kz50][i] *  O2II(i,j,k) *    de(i,j,k) / 16.
             + kcol_buf[CollisionalRxnLUT::kz53][i] *   SiI(i,j,k) *    O2(i,j,k) / 896.
@@ -942,18 +950,35 @@ inline void species_density_updates_gauss_seidel(
            );
         acoef = 0.
             + kcol_buf[CollisionalRxnLUT::kz21][i] *   H2I(i,j,k) /  2.
-            + kcol_buf[CollisionalRxnLUT::kz22][i] *   HII(i,j,k)
             + kcol_buf[CollisionalRxnLUT::kz30][i] *    HI(i,j,k)
             + kcol_buf[CollisionalRxnLUT::kz31][i] *    OI(i,j,k) / 8.
             + kcol_buf[CollisionalRxnLUT::kz32][i] *    CH(i,j,k) / 13.
-            + kcol_buf[CollisionalRxnLUT::kz33][i] *    OH(i,j,k) / 17.
-            + kph_buf[PhotoRxnLUT::kphOI][i];
+            + kcol_buf[CollisionalRxnLUT::kz33][i] *    OH(i,j,k) / 17.;
         scoef = scoef + 16. *
             ( kph_buf[PhotoRxnLUT::kdissOH][i] * OH(i,j,k) /17.0
             + kph_buf[PhotoRxnLUT::kdissCO][i] * CO(i,j,k) /28.0);
+        {
+          // OI <-> OII exchange rates
+          const double x_oi  = kcol_buf[CollisionalRxnLUT::kz22][i] *   HII(i,j,k)
+                             + kph_buf[PhotoRxnLUT::kphOI][i];
+          const double x_oii = kcol_buf[CollisionalRxnLUT::kz39][i] *    HI(i,j,k)
+                             + kcol_buf[CollisionalRxnLUT::kz45][i] *    de(i,j,k);
+          // OII sources and losses that do not involve OI
+          const double s_oii = 16. * ( 0.
+              + kcol_buf[CollisionalRxnLUT::kz38][i] *   CII(i,j,k) *    O2(i,j,k) / 384.
+             );
+          const double l_oii = 0.
+              + kcol_buf[CollisionalRxnLUT::kz40][i] *   H2I(i,j,k) /  2.;
 
-        out_spdens.data[SpLUT::OI][i]   = ( scoef*dtit[i] + OI(i,j,k) )
-                   / ( 1. + acoef*dtit[i] );
+          const double a11 = 1. + dtit[i] * (acoef + x_oi);
+          const double a22 = 1. + dtit[i] * (l_oii + x_oii);
+          const double b1  = OI(i,j,k)  + dtit[i] * scoef;
+          const double b2  = OII(i,j,k) + dtit[i] * s_oii;
+          const double det = a11 * a22 - dtit[i] * dtit[i] * x_oi * x_oii;
+
+          out_spdens.data[SpLUT::OI][i]  = ( a22 * b1 + dtit[i] * x_oii * b2 ) / det;
+          out_spdens.data[SpLUT::OII][i] = ( a11 * b2 + dtit[i] * x_oi  * b1 ) / det;
+        }
 
 
         // ***** OH **********
@@ -1134,19 +1159,7 @@ inline void species_density_updates_gauss_seidel(
 
 
         // ***** OII **********
-        scoef = 0. + 16. * ( 0.
-            + kcol_buf[CollisionalRxnLUT::kz22][i] *   HII(i,j,k) *    OI(i,j,k) / 16.
-            + kcol_buf[CollisionalRxnLUT::kz38][i] *   CII(i,j,k) *    O2(i,j,k) / 384.
-           );
-        acoef = 0.
-            + kcol_buf[CollisionalRxnLUT::kz39][i] *    HI(i,j,k)
-            + kcol_buf[CollisionalRxnLUT::kz40][i] *   H2I(i,j,k) /  2.
-            + kcol_buf[CollisionalRxnLUT::kz45][i] *    de(i,j,k);
-        scoef = scoef
-            + kph_buf[PhotoRxnLUT::kphOI][i] * OI(i,j,k);
-
-        out_spdens.data[SpLUT::OII][i]   = ( scoef*dtit[i] + OII(i,j,k) )
-                   / ( 1. + acoef*dtit[i] );
+        // advanced together with OI above (coupled charge-exchange update)
 
 
         // ***** OHII **********
